@@ -1,0 +1,40 @@
+$theme: dark;
+$primary-color: wheat;
+$card-width: fit-content;
+$display-style: flex;
+$flex-style: column;
+
+.card {
+    @if $theme == dark { // срабатывает только если значение переменной theme = dark 
+        background: black;
+        color: $primary-color;
+    }
+    width: $card-width;
+    display: $display-style;
+    flex-direction: $flex-style;
+
+    .btn {
+        align-self: flex-start;
+    }
+
+
+    &__title {
+        font-size: 25px;
+    }
+
+    &__description {
+        font-size: 15px;
+    }
+
+    &--accent {
+        border: 1px solid red;
+    }
+}
+
+@mixin button($color) {
+    background: $color
+}
+
+.btn {
+    @include button(red)
+}

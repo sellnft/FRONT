@@ -1,0 +1,25 @@
+.card {
+  background: black;
+  color: wheat;
+  width: fit-content;
+  display: flex;
+  flex-direction: column;
+}
+.card .btn {
+  align-self: flex-start;
+}
+.card__title {
+  font-size: 25px;
+}
+.card__description {
+  font-size: 15px;
+}
+.card--accent {
+  border: 1px solid red;
+}
+
+.btn {
+  background: red;
+}
+
+/*# sourceMappingURL=style.css.map */
