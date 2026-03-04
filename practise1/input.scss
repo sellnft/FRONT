@@ -32,7 +32,7 @@ $flex-style: column;
 }
 
 @mixin button($color) {
-    background: $color
+    background: $color;
 }
 
 .btn {
