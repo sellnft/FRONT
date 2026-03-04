@@ -1,0 +1,184 @@
+.usersPage {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 24px 16px 40px;
+  display: grid;
+  gap: 16px;
+}
+
+.usersPage__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.usersPage__header h1 {
+  margin: 0;
+  font-size: 1.9rem;
+}
+
+.usersPage__header p {
+  margin: 4px 0 0;
+  color: #64748b;
+}
+
+.toolbar {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.usersPage__filters input {
+  width: 100%;
+  border: 1px solid #d1d9e6;
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: #ffffff;
+}
+
+.goodsList {
+  display: grid;
+  gap: 12px;
+}
+
+.goodRow {
+  background: #ffffff;
+  border: 1px solid #dde5f3;
+  border-radius: 14px;
+  padding: 14px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.goodRow__main {
+  display: grid;
+  gap: 8px;
+}
+
+.goodRow__main h3 {
+  margin: 0;
+}
+
+.goodRow__main p {
+  margin: 0;
+  color: #475569;
+}
+
+.goodRow__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.goodRow__meta span {
+  background: #eef3ff;
+  color: #304572;
+  border-radius: 99px;
+  padding: 4px 10px;
+  font-size: 0.85rem;
+}
+
+.goodRow__actions {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.btn {
+  border: none;
+  border-radius: 10px;
+  padding: 8px 12px;
+  cursor: pointer;
+  color: #ffffff;
+  background: #1d4ed8;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn--danger {
+  background: #be123c;
+}
+
+.btn--ghost {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.emptyState {
+  background: #ffffff;
+  border: 1px dashed #cdd5e4;
+  border-radius: 14px;
+  padding: 20px;
+  text-align: center;
+  color: #64748b;
+}
+
+.errorBanner {
+  background: #fff1f2;
+  border: 1px solid #fecdd3;
+  color: #9f1239;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.5);
+  display: grid;
+  place-items: center;
+  z-index: 1000;
+  padding: 16px;
+}
+
+.modalCard {
+  width: min(640px, 100%);
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 16px;
+  border: 1px solid #d9e2f1;
+}
+
+.modalCard h2 {
+  margin-top: 0;
+}
+
+.modalForm {
+  display: grid;
+  gap: 10px;
+}
+
+.modalForm label {
+  display: grid;
+  gap: 6px;
+}
+
+.modalForm input,
+.modalForm textarea {
+  border: 1px solid #d1d9e6;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+@media (max-width: 720px) {
+  .goodRow {
+    flex-direction: column;
+  }
+
+  .goodRow__actions {
+    align-self: flex-start;
+  }
+}

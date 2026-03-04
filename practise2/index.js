@@ -35,13 +35,13 @@ app.get("/goods", (req, res) => {
 }); 
 
 // просмотр товара по ID
-app.get("/goods/:id", (res, req) => {
+app.get("/goods/:id", (req, res) => {
     let good = goods.find(u => u.id == req.params.id);
     res.send(JSON.stringify(good)); 
 });
 
 // редактирование
-app.patch("/users/:id", (req, res) => {
+app.patch("/goods/:id", (req, res) => {
     const good = goods.find(u => u.id == req.params.id);
     const { name, price } = req.body;
 
@@ -52,7 +52,7 @@ app.patch("/users/:id", (req, res) => {
 });
 
 // удаление
-app.delete("/users/:id", (req, res) => {
+app.delete("/goods/:id", (req, res) => {
     goods = goods.filter(u => u.id != req.params.id);
     res.send("OK");
 })
@@ -60,3 +60,4 @@ app.delete("/users/:id", (req, res) => {
 app.listen(port, () => {
     console.log(`Сервер запущен на http://localhost:${port}`);
 });
+
