@@ -30,6 +30,53 @@
   flex-wrap: wrap;
 }
 
+.authSection {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.authCard {
+  background: #ffffff;
+  border: 1px solid #dde5f3;
+  border-radius: 14px;
+  padding: 14px;
+}
+
+.authCard h2 {
+  margin: 0 0 10px;
+}
+
+.authForm {
+  display: grid;
+  gap: 8px;
+}
+
+.authForm input {
+  width: 100%;
+  border: 1px solid #d1d9e6;
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: #ffffff;
+}
+
+.authStatus {
+  margin: 10px 0 0;
+  color: #64748b;
+}
+
+.authStatus--ok {
+  color: #166534;
+}
+
+.authMessage {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1e3a8a;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
 .usersPage__filters input {
   width: 100%;
   border: 1px solid #d1d9e6;

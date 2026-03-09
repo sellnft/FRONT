@@ -3,9 +3,15 @@ const { nanoid } = require("nanoid")
 const cors = require("cors")
 const swaggerJsdoc = require("swagger-jsdoc")
 const swaggerUi = require("swagger-ui-express")
+const bcrypt = require("bcrypt")
+const jwt = require("jsonwebtoken")
 
 const app = express()
 const port = 3000
+const JWT_SECRET = "secret_key"
+const TIME_OF_EXPANDING = "15m"
+
+let users = []
 
 let goods = [
 {id: nanoid(6), name: 'Тормозные колодки M Performance', category: 'Тормозная система', description: 'Передние, для M3/M4', price: 18990, stock: 15},
@@ -19,6 +25,27 @@ let goods = [
 {id: nanoid(6), name: 'Интеркулер Wagner Tuning', category: 'Турбо', description: 'Для M135/235i', price: 78990, stock: 2},
 {id: nanoid(6), name: 'Глушитель Akrapovic', category: 'Выхлоп', description: 'Титан, для M2/M3/M4', price: 349990, stock: 1}
 ];
+
+async function hashPassword(password) {
+    const rounds = 10
+    const hashedPassword = await bcrypt.hash(password, rounds)
+    return hashedPassword
+}
+
+async function verifyPassword(password, hashedPassword) {
+    return bcrypt.compare(password, hashedPassword)
+}
+
+function findUserOr404(email, res) {
+    const user = users.find(u => u.email == email)
+
+    if (!user) {
+        res.status(404).json({ error: "User doesn't exist!"})
+        return null
+    }
+
+    return user
+}
 
 const swaggerOptions = {
     definition: {
@@ -94,6 +121,38 @@ app.use((req, res, next) => {
     next()
 })
 
+function authMiddleware(req, res, next) {
+    const header = req.headers.authorization || ""
+
+    const [scheme, token] = header.split(" ")
+
+    if (scheme !== "Bearer" || !token) {
+        return res.status(401).json({ error: "Пользователь не авторизован" })
+    }
+
+    try {
+        const payload = jwt.verify(token, JWT_SECRET)
+        req.user = payload
+        next()
+    } catch(err) {
+        return res.status(401).json({ error: "Невалидный токен" })
+    }
+}
+
+app.post("/api/auth/me", authMiddleware, (req, res) => {
+    const userID = req.user.sub
+    const user = users.find(u => u.id === userID)
+
+    if (!user) {
+        return res.status(404).json({ error: "Пользователя не существует!" })
+    }
+
+    res.json({
+        id: user.id,
+        username: user.username,
+    })
+})
+
 function findGoodOr404(id, res) {
     const good = goods.find(u => u.id == id)
     if (!good) {
@@ -102,6 +161,173 @@ function findGoodOr404(id, res) {
     }
     return good
 }
+
+/**
+ * @swagger
+ * /api/auth/register:
+ *   post:
+ *     summary: Регистрация пользователя
+ *     description: Создает нового пользователя с хешированным паролем
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - username
+ *               - email
+ *               - firstName
+ *               - lastName
+ *               - password
+ *             properties:
+ *               username:
+ *                 type: string
+ *                 example: ivan
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: ivan@example.com
+ *               firstName:
+ *                 type: string
+ *                 example: Иван
+ *               lastName:
+ *                 type: string
+ *                 example: Иванов
+ *               password:
+ *                 type: string
+ *                 example: qwerty123
+ *     responses:
+ *       201:
+ *         description: Пользователь успешно создан
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: string
+ *                   example: ab12cd
+ *                 username:
+ *                   type: string
+ *                   example: ivan
+ *                 email:
+ *                   type: string
+ *                   example: ivan@example.com
+ *                 firstName:
+ *                   type: string
+ *                   example: Иван
+ *                 lastName:
+ *                   type: string
+ *                   example: Иванов
+ *                 password:
+ *                   type: string
+ *                   example: $2b$10$kO6Hq7ZKfV4cPzGm8u7mEuR7r4Xx2p9mP0q3t1yZbCq9Lh5a8b1QW
+ *       400:
+ *         description: Некорректные данные
+ */
+
+app.post("/api/auth/register", async(req, res) => {
+    const { username, email, firstName, lastName, password } = req.body
+
+    if (!username || !email || !firstName || !lastName || !password) {
+        return res.status(400).json({ error: "Not all of required fileds are completed!" })
+    }
+
+    const newUser = {
+        id: String(users.length + 1),
+        username: username,
+        email: email,
+        firstName: firstName,
+        lastName: lastName,
+        password: await hashPassword(password)
+    }
+
+    users.push(newUser)
+    res.status(201).json({
+        id: newUser.id,
+        username: newUser.username,
+    })
+})
+
+/**
+ * @swagger
+ * /api/auth/login:
+ *   post:
+ *     summary: Авторизация пользователя
+ *     description: Проверяет логин и пароль пользователя
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - password
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: ivan@example.com
+ *               password:
+ *                 type: string
+ *                 example: qwerty123
+ *     responses:
+ *       200:
+ *         description: Успешная авторизация
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 login:
+ *                   type: boolean
+ *                   example: true
+ *       400:
+ *         description: Отсутствуют обязательные поля
+ *       401:
+ *         description: Неверные учетные данные
+ *       404:
+ *         description: Пользователь не найден
+ */
+
+app.post("/api/auth/login", async(req, res) => {
+    const { email, password } = req.body
+    
+    if (!email || !password) {
+        return res.status(400).json({ error: "Not all of required fileds are completed!" })
+    }
+
+    const user = findUserOr404(email, res)
+
+    if (!user) {
+        return;
+    }
+
+    const check = await verifyPassword(password, user.password)
+
+    if (!check) {
+        return res.status(401).json({ error: "Incorrect password!" })
+    }
+
+    const accessToken = jwt.sign(
+        {
+            sub: user.id,
+            username: user.id,
+        },
+        JWT_SECRET,
+        {
+            expiresIn: TIME_OF_EXPANDING,
+        }
+    )
+    res.json({
+        accessToken,
+    })
+})
+
 
 /**
  * @swagger
@@ -202,7 +428,7 @@ app.get("/api/goods", (req, res) => {
  *       404:
  *         description: Товар не найден
  */
-app.get("/api/goods/:id", (req, res) => {
+app.get("/api/goods/:id", authMiddleware, (req, res) => {
     const id = req.params.id
     const good = findGoodOr404(id, res)
     if (!good) {
@@ -255,7 +481,7 @@ app.get("/api/goods/:id", (req, res) => {
  *       404:
  *         description: Товар не найден
  */
-app.patch("/api/goods/:id", (req, res) => {
+app.patch("/api/goods/:id", authMiddleware, (req, res) => {
     const id = req.params.id
 
     const good = findGoodOr404(id, res)
@@ -299,7 +525,7 @@ app.patch("/api/goods/:id", (req, res) => {
  *       404:
  *         description: Товар не найден
  */
-app.delete("/api/goods/:id", (req, res) => {
+app.delete("/api/goods/:id", authMiddleware, (req, res) => {
     const id = req.params.id
 
     const exists = goods.some((u) => u.id == id)
