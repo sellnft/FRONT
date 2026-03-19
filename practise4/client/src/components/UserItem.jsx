@@ -1,4 +1,6 @@
-function UserItem({ good, onEdit, onDelete }) {
+function UserItem({ good, canManageGoods, onBuy, onEdit, onDelete }) {
+  const isOutOfStock = Number(good.stock) <= 0;
+
   return (
     <article className="goodRow">
       <div className="goodRow__main">
@@ -8,17 +10,25 @@ function UserItem({ good, onEdit, onDelete }) {
           <span>#{good.id}</span>
           <span>{good.category}</span>
           <span>{Number(good.price).toLocaleString("ru-RU")} RUB</span>
-          <span>Stock: {good.stock}</span>
+          <span>{isOutOfStock ? "Out of stock" : `Stock: ${good.stock}`}</span>
         </div>
       </div>
 
       <div className="goodRow__actions">
-        <button className="btn" onClick={() => onEdit(good)}>
-          Редактировать
-        </button>
-        <button className="btn btn--danger" onClick={() => onDelete(good.id)}>
-          Удалить
-        </button>
+        {canManageGoods ? (
+          <>
+            <button className="btn" onClick={() => onEdit(good)}>
+              Edit
+            </button>
+            <button className="btn btn--danger" onClick={() => onDelete(good.id)}>
+              Delete
+            </button>
+          </>
+        ) : (
+          <button className="btn btn--buy" onClick={() => onBuy(good)} disabled={isOutOfStock}>
+            Buy
+          </button>
+        )}
       </div>
     </article>
   );

@@ -1,0 +1,100 @@
+.adminUsersPage {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 16px 40px;
+  display: grid;
+  gap: 16px;
+}
+
+.adminUsersPage__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.adminUsersPage__header h1 {
+  margin: 0;
+  font-size: 1.9rem;
+}
+
+.adminUsersPage__header p {
+  margin: 4px 0 0;
+  color: #64748b;
+}
+
+.usersTableCard {
+  background: #ffffff;
+  border: 1px solid #dde5f3;
+  border-radius: 16px;
+  padding: 12px;
+  overflow-x: auto;
+}
+
+.usersTable {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 900px;
+}
+
+.usersTable th,
+.usersTable td {
+  padding: 12px 10px;
+  border-bottom: 1px solid #e8edf6;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.usersTable th {
+  color: #475569;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.tableActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tableBadge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.tableBadge--admin {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.tableBadge--user {
+  background: #e2e8f0;
+  color: #334155;
+}
+
+.tableBadge--seller {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.tableBadge--active {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.tableBadge--blocked {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+@media (max-width: 720px) {
+  .adminUsersPage__header {
+    align-items: flex-start;
+  }
+}

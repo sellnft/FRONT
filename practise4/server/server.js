@@ -9,9 +9,12 @@ const jwt = require("jsonwebtoken")
 const app = express()
 const port = 3000
 const JWT_SECRET = "secret_key"
-const TIME_OF_EXPANDING = "15m"
+const REFRESH_SECRET = "refresh_key"
+const TIME_OF_EXPIRING = "15m"
+const REFRESH_EXPIRES_IN = "7d"
 
 let users = []
+let refreshTokens = new Set()
 
 let goods = [
 {id: nanoid(6), name: 'Тормозные колодки M Performance', category: 'Тормозная система', description: 'Передние, для M3/M4', price: 18990, stock: 15},
@@ -25,6 +28,35 @@ let goods = [
 {id: nanoid(6), name: 'Интеркулер Wagner Tuning', category: 'Турбо', description: 'Для M135/235i', price: 78990, stock: 2},
 {id: nanoid(6), name: 'Глушитель Akrapovic', category: 'Выхлоп', description: 'Титан, для M2/M3/M4', price: 349990, stock: 1}
 ];
+
+function generateAccessToken(user) {
+    return jwt.sign(
+        {
+            sub: user.id,
+            username: user.username,
+            role: user.role,
+        },
+        JWT_SECRET,
+        {
+            expiresIn: TIME_OF_EXPIRING,
+        },
+    )
+}
+
+function generateRefreshToken(user) {
+    return jwt.sign(
+        {
+            sub: user.id,
+            username: user.username,
+            role: user.role,
+        },
+        REFRESH_SECRET,
+        {
+            expiresIn: REFRESH_EXPIRES_IN,
+        },
+    )
+}
+
 
 async function hashPassword(password) {
     const rounds = 10
@@ -45,6 +77,29 @@ function findUserOr404(email, res) {
     }
 
     return user
+}
+
+function findUserByIdOr404(id, res) {
+    const user = users.find(u => u.id == id)
+
+    if (!user) {
+        res.status(404).json({ error: "User doesn't exist!" })
+        return null
+    }
+
+    return user
+}
+
+function serializeUser(user) {
+    return {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+        isBlocked: Boolean(user.isBlocked),
+    }
 }
 
 const swaggerOptions = {
@@ -147,10 +202,7 @@ app.post("/api/auth/me", authMiddleware, (req, res) => {
         return res.status(404).json({ error: "Пользователя не существует!" })
     }
 
-    res.json({
-        id: user.id,
-        username: user.username,
-    })
+    res.json(serializeUser(user))
 })
 
 function findGoodOr404(id, res) {
@@ -160,6 +212,22 @@ function findGoodOr404(id, res) {
         return null
     }
     return good
+}
+
+function adminMiddleware(req, res, next) {
+    if (req.user?.role !== "admin") {
+        return res.status(403).json({ error: "Only admin can perform this action" })
+    }
+
+    next()
+}
+
+function goodsManagerMiddleware(req, res, next) {
+    if (req.user?.role !== "admin" && req.user?.role !== "seller") {
+        return res.status(403).json({ error: "Only admin or seller can perform this action" })
+    }
+
+    next()
 }
 
 /**
@@ -229,11 +297,13 @@ function findGoodOr404(id, res) {
  */
 
 app.post("/api/auth/register", async(req, res) => {
-    const { username, email, firstName, lastName, password } = req.body
+    const { username, email, firstName, lastName, password, role } = req.body
 
     if (!username || !email || !firstName || !lastName || !password) {
         return res.status(400).json({ error: "Not all of required fileds are completed!" })
     }
+
+    const normalizedRole = role === "admin" || role === "seller" ? role : "user"
 
     const newUser = {
         id: String(users.length + 1),
@@ -241,6 +311,8 @@ app.post("/api/auth/register", async(req, res) => {
         email: email,
         firstName: firstName,
         lastName: lastName,
+        role: normalizedRole,
+        isBlocked: false,
         password: await hashPassword(password)
     }
 
@@ -248,6 +320,7 @@ app.post("/api/auth/register", async(req, res) => {
     res.status(201).json({
         id: newUser.id,
         username: newUser.username,
+        role: newUser.role,
     })
 })
 
@@ -313,19 +386,81 @@ app.post("/api/auth/login", async(req, res) => {
         return res.status(401).json({ error: "Incorrect password!" })
     }
 
-    const accessToken = jwt.sign(
-        {
-            sub: user.id,
-            username: user.id,
-        },
-        JWT_SECRET,
-        {
-            expiresIn: TIME_OF_EXPANDING,
-        }
-    )
+    const accessToken = generateAccessToken(user)
+    const refreshToken = generateRefreshToken(user)
+
+    refreshTokens.add(refreshToken)
+
     res.json({
         accessToken,
+        refreshToken,
     })
+})
+
+app.post("/api/auth/refresh", (req, res) => {
+    const { refreshToken } = req.body
+
+    if (!refreshToken) {
+        return res.status(400).json({ error: "refreshToken is required" })
+    }
+
+    if (!refreshTokens.has(refreshToken)) {
+        return res.status(401).json({ error: "Invalid refreshToken" })
+    }
+
+    try {
+        const payload =  jwt.verify(refreshToken, REFRESH_SECRET)
+
+        const user = users.find(u => u.id == payload.sub)
+        if (!user) {
+            return res.status(401).json({ error: "No user found" })
+        }
+
+        refreshTokens.delete(refreshToken)
+
+        const newAccessToken = generateAccessToken(user)
+        const newRefreshToken = generateRefreshToken(user)
+
+        refreshTokens.add(newRefreshToken)
+        res.json({
+            accessToken: newAccessToken,
+            refreshToken: newRefreshToken,
+        })
+    } catch(err) {
+        return res.status(401).json({ error: "Invalid or expired token"})
+    }
+})
+
+app.get("/api/users", authMiddleware, adminMiddleware, (req, res) => {
+    res.json(users.map(serializeUser))
+})
+
+app.patch("/api/users/:id/role", authMiddleware, adminMiddleware, (req, res) => {
+    const user = findUserByIdOr404(req.params.id, res)
+
+    if (!user) {
+        return
+    }
+
+    const { role } = req.body
+
+    if (role !== "admin" && role !== "user" && role !== "seller") {
+        return res.status(400).json({ error: "Role must be admin, seller or user" })
+    }
+
+    user.role = role
+    res.json(serializeUser(user))
+})
+
+app.patch("/api/users/:id/block-status", authMiddleware, adminMiddleware, (req, res) => {
+    const user = findUserByIdOr404(req.params.id, res)
+
+    if (!user) {
+        return
+    }
+
+    user.isBlocked = Boolean(req.body?.isBlocked)
+    res.json(serializeUser(user))
 })
 
 
@@ -369,7 +504,7 @@ app.post("/api/auth/login", async(req, res) => {
  *       400:
  *         description: Ошибка в теле запроса
  */
-app.post("/api/goods", (req, res) => {
+app.post("/api/goods", authMiddleware, goodsManagerMiddleware, (req, res) => {
     const { name, category, description, price, stock } = req.body
 
     const newGood = {
@@ -401,7 +536,7 @@ app.post("/api/goods", (req, res) => {
  *               items:
  *                 $ref: "#/components/schemas/Good"
  */
-app.get("/api/goods", (req, res) => {
+app.get("/api/goods", authMiddleware, (req, res) => {
     res.json(goods)
 })
 
@@ -481,7 +616,7 @@ app.get("/api/goods/:id", authMiddleware, (req, res) => {
  *       404:
  *         description: Товар не найден
  */
-app.patch("/api/goods/:id", authMiddleware, (req, res) => {
+app.patch("/api/goods/:id", authMiddleware, goodsManagerMiddleware, (req, res) => {
     const id = req.params.id
 
     const good = findGoodOr404(id, res)
@@ -525,7 +660,7 @@ app.patch("/api/goods/:id", authMiddleware, (req, res) => {
  *       404:
  *         description: Товар не найден
  */
-app.delete("/api/goods/:id", authMiddleware, (req, res) => {
+app.delete("/api/goods/:id", authMiddleware, goodsManagerMiddleware, (req, res) => {
     const id = req.params.id
 
     const exists = goods.some((u) => u.id == id)
